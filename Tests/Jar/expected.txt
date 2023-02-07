@@ -1,0 +1,4 @@
+test.jar
+  Title: Test Title
+  Version: 1.2.3
+  Author: DEMA Consulting

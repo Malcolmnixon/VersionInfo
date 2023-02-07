@@ -1,0 +1,6 @@
+test.dll
+  Title: Example DLL
+  Version: 1.2.3.4
+  Product: Example DLL
+  Author: DEMA Consulting
+  Copyright: Copyright (c) DEMA Consulting 2018

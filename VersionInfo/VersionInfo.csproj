@@ -1,0 +1,24 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net6.0</TargetFramework>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <Nullable>disable</Nullable>
+    <Title>VersionInfo</Title>
+    <Description>Version Information Utility</Description>
+    <Copyright>Copyright © DEMA Consulting</Copyright>
+    <Version>1.1.0</Version>
+    <ApplicationIcon>VersionInfo.ico</ApplicationIcon>
+    <PackAsTool>True</PackAsTool>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Content Include="VersionInfo.ico" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="WixToolset.Dtf.WindowsInstaller" Version="4.0.0-rc.2" />
+  </ItemGroup>
+
+</Project>
