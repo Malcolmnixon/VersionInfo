@@ -1,3 +1,6 @@
+1.2.0
+    Added support for reading command line options from a file
+
 1.1.0
     Migrated from Sourceforge to Github
     Upgraded project to .NET 6

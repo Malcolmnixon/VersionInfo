@@ -22,6 +22,8 @@ To run the utility; execute:
     --emit=verbose         Emit Verbose report
     --emit=csv             Emit CSV report
     --                     End of options
+
+    @<options-file>        Provide command line arguments from file
 ```
 
 

@@ -108,11 +108,31 @@ namespace VersionInfo
             var badArguments = false;
             IEmitter emitter = new TextEmitter();
 
+            // Handle arguments from file
+            var arguments = args.ToList();
+            if (args.Length == 1 && args[0].StartsWith("@"))
+            {
+                try
+                {
+                    arguments = File.ReadAllText(args[0][1..])
+                        .Split('\r', '\n')
+                        .Select(a => a.Trim())
+                        .Where(a => !string.IsNullOrEmpty(a))
+                        .ToList();
+                }
+                catch
+                {
+                    // Report error
+                    Console.WriteLine($"Unable to process {args[0][1..]}");
+                    badArguments = true;
+                }
+            }
+
             // Process the arguments
-            for (var i = 0; i < args.Length; ++i)
+            for (var i = 0; i < arguments.Count; ++i)
             {
                 // Get argument (and optional parameter)
-                var arg = args[i];
+                var arg = arguments[i];
                 var param = string.Empty;
                 if (arg.StartsWith("--") && arg.Contains('='))
                 {
@@ -237,14 +257,14 @@ namespace VersionInfo
 
                     // End of options, start of patterns
                     case "--":
-                        options.Patterns.AddRange(args.Skip(i + 1));
-                        i = args.Length;
+                        options.Patterns.AddRange(arguments.Skip(i + 1));
+                        i = arguments.Count;
                         break;
 
                     // Unknown, possibly pattern
                     default:
                         // Inspect argument
-                        if (args[i].StartsWith("-"))
+                        if (arguments[i].StartsWith("-"))
                         {
                             // Unknown argument. If this were a pattern then use '--'
                             badArguments = true;
@@ -252,7 +272,7 @@ namespace VersionInfo
                         else
                         {
                             // Looks like a pattern
-                            options.Patterns.Add(args[i]);
+                            options.Patterns.Add(arguments[i]);
                         }
                         break;
                 }
@@ -288,6 +308,8 @@ namespace VersionInfo
                 Console.WriteLine("--emit=verbose         Emit Verbose report");
                 Console.WriteLine("--emit=csv             Emit CSV report");
                 Console.WriteLine("--                     End of options");
+                Console.WriteLine();
+                Console.WriteLine("@<options-file>        Provide command line arguments from file");
                 Console.WriteLine();
 
                 // Report error

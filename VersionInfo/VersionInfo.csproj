@@ -8,7 +8,7 @@
     <Title>VersionInfo</Title>
     <Description>Version Information Utility</Description>
     <Copyright>Copyright © DEMA Consulting</Copyright>
-    <Version>1.1.0</Version>
+    <Version>1.2.0</Version>
     <ApplicationIcon>VersionInfo.ico</ApplicationIcon>
     <PackAsTool>True</PackAsTool>
     <PackageProjectUrl>https://github.com/Malcolmnixon/VersionInfo</PackageProjectUrl>
