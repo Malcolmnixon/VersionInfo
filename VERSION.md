@@ -1,3 +1,8 @@
+2.0.0-rc.1
+    Added support for mixing direct and file-based command-line arguments
+    Added glob-based search patterns including globstar (`**`) for recursive
+    Added root argument
+    
 1.2.0
     Added support for reading command line options from a file
 

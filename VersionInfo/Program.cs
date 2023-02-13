@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using GlobExpressions;
 using VersionInfo.Emitters;
 using VersionInfo.Parsers;
 
@@ -50,81 +51,62 @@ namespace VersionInfo
         }
 
         /// <summary>
-        /// Find files matching the given search pattern
-        /// </summary>
-        /// <param name="pattern">Search pattern</param>
-        /// <param name="options">Options</param>
-        /// <returns>Found files</returns>
-        private static IEnumerable<FileInformation> Find(string pattern, Options options)
-        {
-            // Build the return list
-            var ret = new List<FileInformation>();
-
-            try
-            {
-                if (Directory.Exists(pattern))
-                {
-                    pattern = GetFullPath(pattern);
-
-                    // Add all files in the directory
-                    ret.AddRange(Directory.EnumerateFiles(pattern).Select(f => new FileInformation { FullPath = f }));
-
-                    // Optionally recurse into child folders
-                    if (options.Recursive)
-                    {
-                        ret.AddRange(Directory.EnumerateDirectories(pattern).SelectMany(d => Find(d, options)));
-                    }
-                }
-                else
-                {
-                    // Split the pattern into directory and file
-                    var patternDir = GetFullPath(Path.GetDirectoryName(pattern));
-                    var patternFile = Path.GetFileName(pattern) ?? string.Empty;
-
-                    // Add all matching files
-                    ret.AddRange(Directory.EnumerateFiles(patternDir, patternFile).Select(f => new FileInformation { FullPath = f }));
-                }
-            }
-            catch
-            {
-                // Errors can happen if user does not have permissions
-            }
-
-            // Return matching FileInformation
-            return ret;
-        }
-
-        /// <summary>
         /// Application entry point
         /// </summary>
         /// <param name="args">Program arguments</param>
         public static void Main(string[] args)
         {
             // Get our version
-            var version = Assembly.GetEntryAssembly().GetName().Version;
+            var version = Assembly.GetEntryAssembly()?.GetName().Version;
 
             // Options
-            var options = new Options();
+            var options = new Options {Root = Directory.GetCurrentDirectory()};
             var badArguments = false;
             IEmitter emitter = new TextEmitter();
 
-            // Handle arguments from file
+            // Expand all arguments
             var arguments = args.ToList();
-            if (args.Length == 1 && args[0].StartsWith("@"))
+
+            // Handle arguments from file
+            for (var i = 0; i < arguments.Count;)
             {
+                // Sanity check
+                if (arguments.Count > 10000)
+                {
+                    // Report error
+                    Console.WriteLine("Argument count exceeded - possibly infinite loop in arguments expansion");
+                    badArguments = true;
+                    break;
+                }
+
+                // Skip non file-referenced arguments
+                var arg = arguments[i];
+                if (!arg.StartsWith('@'))
+                {
+                    ++i;
+                    continue;
+                }
+
                 try
                 {
-                    arguments = File.ReadAllText(args[0][1..])
+                    // Expand the options file
+                    var expanded = File.ReadAllText(arg[1..])
                         .Split('\r', '\n')
+                        .Select(a => a.Split('#', 2)[0])
                         .Select(a => a.Trim())
                         .Where(a => !string.IsNullOrEmpty(a))
                         .ToList();
+
+                    // Replace the file-reference with the expanded options
+                    arguments.RemoveAt(i);
+                    arguments.InsertRange(i, expanded);
                 }
                 catch
                 {
                     // Report error
-                    Console.WriteLine($"Unable to process {args[0][1..]}");
+                    Console.WriteLine($"Unable to expand {arg[1..]}");
                     badArguments = true;
+                    break;
                 }
             }
 
@@ -137,9 +119,9 @@ namespace VersionInfo
                 if (arg.StartsWith("--") && arg.Contains('='))
                 {
                     // Argument is of type --arg=param
-                    var sep = arg.IndexOf('=');
-                    param = arg.Substring(sep + 1);
-                    arg = arg.Substring(0, sep);
+                    var split = arg.Split('=', 2);
+                    arg = split[0];
+                    param = split[1];
                 }
 
                 switch (arg)
@@ -155,12 +137,6 @@ namespace VersionInfo
                     case "-v":
                     case "--version":
                         options.PrintVersion = true;
-                        break;
-
-                    // Recursive
-                    case "-r":
-                    case "--recurse":
-                        options.Recursive = param != "off";
                         break;
 
                     // File size
@@ -197,6 +173,11 @@ namespace VersionInfo
                     case "-s2":
                     case "--sha-2":
                         options.CalculateSha2 = param != "off";
+                        break;
+
+                    // Root
+                    case "--root":
+                        options.Root = param;
                         break;
 
                     case "--summary":
@@ -297,11 +278,11 @@ namespace VersionInfo
                 Console.WriteLine("-v --version           Print the version of this program");
                 Console.WriteLine("-s --size[=on/off]     Include/exclude file-size");
                 Console.WriteLine("-t --time[=on/off]     Include/exclude file-time");
-                Console.WriteLine("-r --recurse[=on/off]  Enable/disable recurse into folders");
                 Console.WriteLine("-c --crc32[=on/off]    Enable/disable file CRC32");
                 Console.WriteLine("-m --md5[=on/off]      Enable/disable file MD5");
                 Console.WriteLine("-s1 --sha-1[=on/off]   Enable/disable file SHA-1");
                 Console.WriteLine("-s2 --sha-2[=on/off]   Enable/disable file SHA-2");
+                Console.WriteLine("--root=<path>          Root of search tree");
                 Console.WriteLine("--summary=on           Add summary to report");
                 Console.WriteLine("--summary=only         Only show summary");
                 Console.WriteLine("--emit=text            Emit Text report");
@@ -323,8 +304,30 @@ namespace VersionInfo
                 return;
             }
 
+            // Find the files
+            var globFiles = new List<string>();
+            foreach (var pattern in options.Patterns)
+            {
+                if (pattern.StartsWith('!'))
+                {
+                    var glob = new Glob(pattern[1..]);
+                    globFiles = globFiles
+                        .Where(f => !glob.IsMatch(f))
+                        .ToList();
+                }
+                else
+                {
+                    globFiles = globFiles
+                        .Union(Glob.Files(options.Root, pattern))
+                        .ToList();
+                }
+            }
+
             // Find all files matching the patterns and sort them
-            var foundFiles = options.Patterns.SelectMany(p => Find(p, options)).OrderBy(f => f.FullPath).ToList();
+            var foundFiles = globFiles
+                .Select(f => new FileInformation {FullPath = GetFullPath(f)})
+                .OrderBy(f => f.FullPath)
+                .ToList();
 
             // Find the common portion of the file path and build a relative name
             if (foundFiles.Count != 0)

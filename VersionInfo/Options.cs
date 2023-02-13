@@ -34,9 +34,9 @@ namespace VersionInfo
         public bool GetFileTime { get; set; } = true;
 
         /// <summary>
-        /// Recurse into folders
+        /// Search root
         /// </summary>
-        public bool Recursive { get; set; }
+        public string Root { get; set; }
 
         /// <summary>
         /// Calculate CRC32 option
