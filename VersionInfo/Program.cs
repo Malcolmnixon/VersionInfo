@@ -21,36 +21,6 @@ namespace VersionInfo
     public class Program
     {
         /// <summary>
-        /// Get the full path of a path
-        /// </summary>
-        /// <param name="path">Path string</param>
-        /// <returns>Full path string</returns>
-        private static string GetFullPath(string path)
-        {
-            // Treat empty string as current directory
-            if (string.IsNullOrEmpty(path))
-                path = ".";
-
-            // Convert to absolute path
-            path = Path.GetFullPath(path);
-
-            // Fix path element-by-element
-            var fixedPath = string.Empty;
-            foreach (var pathElem in path.Split(Path.DirectorySeparatorChar))
-            {
-                if (string.IsNullOrEmpty(fixedPath))
-                {
-                    fixedPath = pathElem + Path.DirectorySeparatorChar;
-                    continue;
-                }
-                fixedPath = Directory.GetFileSystemEntries(fixedPath, pathElem)[0];
-            }
-
-            // Return fixed path
-            return fixedPath;
-        }
-
-        /// <summary>
         /// Application entry point
         /// </summary>
         /// <param name="args">Program arguments</param>
@@ -325,7 +295,7 @@ namespace VersionInfo
 
             // Find all files matching the patterns and sort them
             var foundFiles = globFiles
-                .Select(f => new FileInformation {FullPath = GetFullPath(f)})
+                .Select(f => new FileInformation {FullPath = Path.GetFullPath(f, options.Root)})
                 .OrderBy(f => f.FullPath)
                 .ToList();
 
