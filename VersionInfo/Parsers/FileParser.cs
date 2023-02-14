@@ -58,6 +58,10 @@ namespace VersionInfo.Parsers
                 case ".nupkg":
                     NugetVersionInfoParser.Parse(info, options);
                     break;
+
+                case ".docx":
+                    DocxVersionInfoParser.Parse(info, options);
+                    break;
             }
         }
     }
